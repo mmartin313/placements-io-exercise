@@ -1,0 +1,51 @@
+version: '3.7'
+services:
+  postgres:
+    image: postgres:14
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    ports:
+      - '5432:5432'
+    volumes:
+      - placements-io-exercise-db-data:/var/lib/postgresql/data:cached
+
+  backend:
+    build:
+      context: backend
+      dockerfile: Dockerfile
+    command: python app/main.py
+    tty: true
+    volumes:
+      - ./backend:/app/:cached
+      - ./.docker/.ipython:/root/.ipython:cached
+    environment:
+      PYTHONPATH: .
+      DATABASE_URL: 'postgresql://postgres:password@postgres:5432/postgres'
+      ENVIRONMENT: 'DEVELOPMENT'
+      FIXER_API_KEY: 'c6782b18c264cb981258e06d5776c817'
+    ports:
+      - '3002:8888'
+    depends_on:
+      - "postgres"
+
+  frontend:
+    build:
+      context: frontend
+      dockerfile: Dockerfile
+    stdin_open: true
+    volumes:
+      - './frontend:/app:cached'
+      - './frontend/node_modules:/app/node_modules:cached'
+    environment:
+      - NODE_ENV=development
+      - WDS_SOCKET_PORT=3001
+      - ESLINT_NO_DEV_ERRORS=true
+    ports:
+      - 3001:3000
+    depends_on:
+      - "backend"
+
+volumes:
+  placements-io-exercise-db-data:
